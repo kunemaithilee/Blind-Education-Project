@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useVoiceContext } from "../../context/VoiceContext";
 
+function getBrowserHelp() {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("edg")) return "Edge: go to edge://settings/content/microphones";
+  if (ua.includes("chrome")) return "Chrome: go to chrome://settings/content/microphone";
+  return "Allow microphone access in your browser settings.";
+}
+
 function VoiceAssistant() {
   const {
     error,
@@ -11,16 +18,15 @@ function VoiceAssistant() {
     stopListening,
   } = useVoiceContext();
 
-  const isActive = isVoiceModeOn;
   const toggleRef = useRef(() => {});
 
   const toggle = useCallback(() => {
-    if (isActive) {
+    if (isVoiceModeOn) {
       stopListening();
     } else {
       startListening();
     }
-  }, [isActive, startListening, stopListening]);
+  }, [isVoiceModeOn, startListening, stopListening]);
 
   toggleRef.current = toggle;
 
@@ -46,15 +52,20 @@ function VoiceAssistant() {
     );
   }
 
-  const statusLabel = isListening ? "Listening" : error ? "Error" : "Not Listening";
-  const statusColor = isListening ? "#22d3ee" : error ? "#f87171" : "#6b7280";
+  const statusLabel = isListening ? "Listening" : error ? "Error" : isVoiceModeOn ? "Ready" : "Off";
+  const statusColor = isListening ? "#22d3ee" : error ? "#f87171" : isVoiceModeOn ? "#fbbf24" : "#6b7280";
+
+  const isFatal = error && (
+    error.includes("Microphone permission") ||
+    error.includes("No microphone")
+  );
 
   return (
     <section className="global-voice" aria-label="Voice assistant" aria-live="polite">
       <button
-        className={`global-voice-button ${isActive ? "active" : ""}`}
+        className={`global-voice-button ${isVoiceModeOn ? "active" : ""}`}
         onClick={toggle}
-        aria-label={isActive ? "Stop voice navigation" : "Start voice navigation"}
+        aria-label={isVoiceModeOn ? "Stop voice navigation" : "Start voice navigation"}
         style={{ minHeight: "44px", padding: "0 14px", gap: "8px" }}
       >
         <span
@@ -68,7 +79,7 @@ function VoiceAssistant() {
             transition: "all 0.2s",
           }}
         />
-        {isActive ? "Stop" : "Mic"}
+        {isVoiceModeOn ? "Stop" : "Mic"}
       </button>
 
       <div className="global-voice-text">
@@ -76,11 +87,18 @@ function VoiceAssistant() {
           {statusLabel}
         </strong>
         {error ? (
-          <span style={{ color: "#f87171" }}>{error}</span>
+          <span style={{ color: "#f87171" }}>
+            {error}
+            {isFatal && (
+              <span style={{ display: "block", fontSize: "0.85rem", marginTop: 4 }}>
+                {getBrowserHelp()} then click Mic to retry.
+              </span>
+            )}
+          </span>
         ) : isListening ? (
           <span>Say: "Go to Courses", "Go Back", "Repeat", or "Stop"</span>
         ) : (
-          <span>Press Start Voice or Alt+V, then speak commands.</span>
+          <span>Press Mic or Alt+V, then speak commands.</span>
         )}
       </div>
     </section>

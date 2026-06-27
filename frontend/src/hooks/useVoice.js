@@ -82,60 +82,23 @@ const pageDescriptions = {
 };
 
 const courseModuleCommands = [
-  {
-    match: ["physics", "physics through sound", "sound waves"],
-    title: "Physics Through Sound",
-    path: "/courses?course=physics-through-sound",
-  },
-  {
-    match: ["organic chemistry", "chemistry", "alkanes", "cycloalkanes"],
-    title: "Organic Chemistry Basics",
-    path: "/courses?course=organic-chemistry-basics",
-  },
-  {
-    match: ["algebra", "audio steps", "linear equations"],
-    title: "Algebra With Audio Steps",
-    path: "/courses?course=algebra-with-audio-steps",
-  },
-  {
-    match: ["english grammar", "grammar", "english"],
-    title: "English Grammar Essentials",
-    path: "/courses?course=english-grammar-essentials",
-  },
-  {
-    match: ["computer fundamentals", "computer", "technology"],
-    title: "Computer Fundamentals",
-    path: "/courses?course=computer-fundamentals",
-  },
-  {
-    match: ["independent living", "living skills", "life skills"],
-    title: "Independent Living Skills",
-    path: "/courses?course=independent-living-skills",
-  },
+  { match: ["physics", "physics through sound", "sound waves"], title: "Physics Through Sound", path: "/courses?course=physics-through-sound" },
+  { match: ["organic chemistry", "chemistry", "alkanes", "cycloalkanes"], title: "Organic Chemistry Basics", path: "/courses?course=organic-chemistry-basics" },
+  { match: ["algebra", "audio steps", "linear equations"], title: "Algebra With Audio Steps", path: "/courses?course=algebra-with-audio-steps" },
+  { match: ["english grammar", "grammar", "english"], title: "English Grammar Essentials", path: "/courses?course=english-grammar-essentials" },
+  { match: ["computer fundamentals", "computer", "technology"], title: "Computer Fundamentals", path: "/courses?course=computer-fundamentals" },
+  { match: ["independent living", "living skills", "life skills"], title: "Independent Living Skills", path: "/courses?course=independent-living-skills" },
 ];
 
 const courseCategoryCommands = [
-  {
-    match: ["science courses", "open science", "show science"],
-    category: "Science",
-  },
-  {
-    match: ["math courses", "open math", "show math", "mathematics"],
-    category: "Math",
-  },
-  {
-    match: ["english courses", "open english", "show english"],
-    category: "English",
-  },
-  {
-    match: ["technology courses", "open technology", "show technology"],
-    category: "Technology",
-  },
-  {
-    match: ["life skills courses", "open life skills", "show life skills"],
-    category: "Life Skills",
-  },
+  { match: ["science courses", "open science", "show science"], category: "Science" },
+  { match: ["math courses", "open math", "show math", "mathematics"], category: "Math" },
+  { match: ["english courses", "open english", "show english"], category: "English" },
+  { match: ["technology courses", "open technology", "show technology"], category: "Technology" },
+  { match: ["life skills courses", "open life skills", "show life skills"], category: "Life Skills" },
 ];
+
+const FATAL_ERRORS = ["not-allowed", "service-not-allowed", "audio-capture"];
 
 function normalizeCommand(command) {
   return command.toLowerCase().replace(/[^\w\s]/g, "").trim();
@@ -150,7 +113,6 @@ function findCommand(transcript) {
 
 function findCourseModuleCommand(transcript) {
   const normalized = normalizeCommand(transcript);
-
   return courseModuleCommands.find((course) =>
     course.match.some((phrase) => normalized.includes(phrase))
   );
@@ -158,7 +120,6 @@ function findCourseModuleCommand(transcript) {
 
 function findCourseCategoryCommand(transcript) {
   const normalized = normalizeCommand(transcript);
-
   return courseCategoryCommands.find((category) =>
     category.match.some((phrase) => normalized.includes(phrase))
   );
@@ -176,13 +137,9 @@ function extractQuestion(transcript) {
 
 function isAssistantQuestion(transcript) {
   const normalized = normalizeCommand(transcript);
-
-  if (
-    ["assistant", "ai assistant", "open assistant", "go to assistant", "ask question"].includes(normalized)
-  ) {
+  if (["assistant", "ai assistant", "open assistant", "go to assistant", "ask question"].includes(normalized)) {
     return false;
   }
-
   return (
     normalized.startsWith("hey assistant") ||
     normalized.startsWith("assistant ") ||
@@ -199,21 +156,17 @@ function isAssistantQuestion(transcript) {
 
 function getRecognitionErrorMessage(error) {
   if (error === "not-allowed" || error === "service-not-allowed") {
-    return "Microphone permission is blocked. Please allow microphone access.";
+    return "Microphone permission is blocked. Please allow microphone access in your browser settings, then click Mic again.";
   }
-
   if (error === "audio-capture") {
-    return "No microphone was found. Please connect or enable your microphone.";
+    return "No microphone was found. Please connect or enable your microphone, then click Mic again.";
   }
-
   if (error === "network") {
     return "Speech recognition service is not reachable. Please check your internet connection and try again.";
   }
-
   if (error === "language-not-supported") {
     return "This speech language is not supported by your browser.";
   }
-
   return "I could not understand. Please try again.";
 }
 
@@ -234,27 +187,30 @@ export function useVoice() {
 
   const isSupported = useMemo(() => Boolean(getSpeechRecognition()), []);
 
+  const scheduleRestart = useCallback(() => {
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+    restartTimerRef.current = setTimeout(() => {
+      startListeningRef.current();
+    }, 350);
+  }, []);
+
   const say = useCallback((message) => {
     lastSpokenRef.current = message;
     setReply(message);
-
     const shouldResume = shouldKeepListeningRef.current;
 
     if (shouldResume && recognitionRef.current && isRecognitionActiveRef.current) {
       isSpeakingRef.current = true;
-      recognitionRef.current.stop();
+      try { recognitionRef.current.stop(); } catch {}
     }
 
     speak(message, () => {
       isSpeakingRef.current = false;
-
       if (shouldKeepListeningRef.current) {
-        restartTimerRef.current = setTimeout(() => {
-          startListeningRef.current();
-        }, 300);
+        scheduleRestart();
       }
     });
-  }, []);
+  }, [scheduleRestart]);
 
   const startListeningRef = useRef(() => {});
 
@@ -274,7 +230,7 @@ export function useVoice() {
         setIsVoiceModeOn(false);
         stopSpeaking();
         if (recognitionRef.current) {
-          recognitionRef.current.stop();
+          try { recognitionRef.current.stop(); } catch {}
         }
         isRecognitionActiveRef.current = false;
         setIsListening(false);
@@ -284,7 +240,6 @@ export function useVoice() {
 
       if (normalized.includes("repeat")) {
         say(lastSpokenRef.current);
-        setReply(lastSpokenRef.current);
         return;
       }
 
@@ -294,11 +249,7 @@ export function useVoice() {
         return;
       }
 
-      if (
-        normalized.includes("where am i") ||
-        normalized.includes("read page") ||
-        normalized.includes("describe page")
-      ) {
+      if (normalized.includes("where am i") || normalized.includes("read page") || normalized.includes("describe page")) {
         say(pageDescriptions[location.pathname] || "You are inside EchoLearn. Say help for available commands.");
         return;
       }
@@ -309,7 +260,6 @@ export function useVoice() {
       }
 
       const command = findCommand(spokenText);
-
       if (command) {
         navigate(command.path);
         say(command.response);
@@ -325,7 +275,6 @@ export function useVoice() {
       }
 
       const courseModule = findCourseModuleCommand(spokenText);
-
       if (courseModule) {
         navigate(courseModule.path);
         say(`Opening ${courseModule.title}.`);
@@ -333,7 +282,6 @@ export function useVoice() {
       }
 
       const courseCategory = findCourseCategoryCommand(spokenText);
-
       if (courseCategory) {
         navigate(`/courses?category=${encodeURIComponent(courseCategory.category)}`);
         say(`Opening ${courseCategory.category} courses.`);
@@ -346,15 +294,11 @@ export function useVoice() {
   );
 
   const startListening = useCallback(() => {
-    if (isRecognitionActiveRef.current) {
-      return;
-    }
+    if (isRecognitionActiveRef.current) return;
 
     const SpeechRecognition = getSpeechRecognition();
-
     if (!SpeechRecognition) {
       setError("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
-      say("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
       return;
     }
 
@@ -365,6 +309,7 @@ export function useVoice() {
     shouldKeepListeningRef.current = true;
     setIsVoiceModeOn(true);
     isSpeakingRef.current = false;
+    setError("");
 
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
@@ -390,23 +335,26 @@ export function useVoice() {
     };
 
     recognition.onerror = (event) => {
-      if (event.error === "aborted") {
-        return;
-      }
-
+      if (event.error === "aborted") return;
       if (event.error === "no-speech") {
         setError("");
         return;
       }
 
       const message = getRecognitionErrorMessage(event.error);
+      setError(message);
 
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      if (FATAL_ERRORS.includes(event.error)) {
         shouldKeepListeningRef.current = false;
         setIsVoiceModeOn(false);
+        setIsListening(false);
+        isRecognitionActiveRef.current = false;
+        setReply(message);
+        return;
       }
 
-      setError(message);
+      setIsListening(false);
+      isRecognitionActiveRef.current = false;
       say(message);
     };
 
@@ -415,25 +363,25 @@ export function useVoice() {
       setIsListening(false);
 
       if (shouldKeepListeningRef.current && !isSpeakingRef.current) {
-        restartTimerRef.current = setTimeout(() => {
-          startListeningRef.current();
-        }, 350);
+        scheduleRestart();
       }
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
-  }, [handleCommand, say]);
+    try {
+      recognition.start();
+    } catch {
+      setError("Could not start microphone. Please refresh and try again.");
+      shouldKeepListeningRef.current = false;
+      setIsVoiceModeOn(false);
+    }
+  }, [handleCommand, say, scheduleRestart]);
 
   startListeningRef.current = startListening;
 
   useEffect(() => {
     if (!isSupported) return;
-
-    const timer = setTimeout(() => {
-      startListening();
-    }, 500);
-
+    const timer = setTimeout(() => startListening(), 500);
     return () => clearTimeout(timer);
   }, [isSupported, startListening]);
 
@@ -445,7 +393,7 @@ export function useVoice() {
       clearTimeout(restartTimerRef.current);
     }
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try { recognitionRef.current.stop(); } catch {}
     }
     isRecognitionActiveRef.current = false;
     setIsListening(false);
