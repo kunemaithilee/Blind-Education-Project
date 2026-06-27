@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "seed": "npm run seed --prefix backend",
+    "setup-db": "npm run setup-db --prefix backend",
     "frontend": "npm start --prefix frontend",
     "backend": "npm run dev --prefix backend",
     "build": "npm install --prefix frontend && npm run build --prefix frontend",
