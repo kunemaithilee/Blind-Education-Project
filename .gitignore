@@ -24,6 +24,7 @@ dist/
 .DS_Store
 Thumbs.db
 *.log
+*.lnk
 
 # Backend
 backend/uploads/
