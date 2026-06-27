@@ -11,6 +11,7 @@ const lessonRoutes = require("./routes/lessonRoutes");
 const progressRoutes = require("./routes/progressRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const ocrRoutes = require("./routes/ocrRoutes");
+const quizRoutes = require("./routes/quizRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -36,6 +37,7 @@ app.use("/api/lessons", lessonRoutes);
 app.use("/api/progress", authMiddleware, progressRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/ocr", ocrRoutes);
+app.use("/api/quizzes", quizRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });

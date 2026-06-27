@@ -11,6 +11,7 @@ import OCR from "../pages/OCR/OCR";
 import Progress from "../pages/Progress/Progress";
 import Quizzes from "../pages/Quizzes/Quizzes";
 import Settings from "../pages/Settings/Settings";
+import QuizTake from "../pages/Quizzes/QuizTake";
 
 function AppRoutes() {
   return (
@@ -26,6 +27,7 @@ function AppRoutes() {
       <Route path="/ocr" element={<OCR />} />
       <Route path="/progress" element={<Progress />} />
       <Route path="/quizzes" element={<Quizzes />} />
+      <Route path="/quiz/:id" element={<QuizTake />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
   );

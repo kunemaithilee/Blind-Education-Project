@@ -17,7 +17,7 @@ async function setupDatabase() {
   const collections = await db.listCollections().toArray();
   const collectionNames = collections.map((c) => c.name);
 
-  const required = ["users", "courses", "lessons", "progresses", "chats"];
+  const required = ["users", "courses", "lessons", "progresses", "chats", "quizzes", "quizattempts"];
   for (const name of required) {
     if (!collectionNames.includes(name)) {
       await db.createCollection(name);
@@ -32,6 +32,8 @@ async function setupDatabase() {
   await db.collection("lessons").createIndex({ course: 1, order: 1 });
   await db.collection("progresses").createIndex({ userId: 1, courseTitle: 1 });
   await db.collection("chats").createIndex({ userId: 1 });
+  await db.collection("quizzes").createIndex({ course: 1 });
+  await db.collection("quizattempts").createIndex({ userId: 1, quizId: 1 });
 
   console.log("Indexes created successfully");
   console.log("Database setup complete!");
